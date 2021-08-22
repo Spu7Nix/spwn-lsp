@@ -30,8 +30,8 @@ impl LanguageServer for Backend {
         match parsed {
             Ok(_val) => {
                 self.client
-                    .log_message(MessageType::Info, "no error warnings!")
-                    .await;
+                    .publish_diagnostics(params.text_document.uri, vec![], None)
+                    .await
             }
 
             Err(error) => match error {
@@ -39,7 +39,7 @@ impl LanguageServer for Backend {
                     expected,
                     found,
                     pos,
-                    file,
+                    file: _,
                 } => {
                     self.client
                         .publish_diagnostics(
@@ -49,32 +49,55 @@ impl LanguageServer for Backend {
                                 code_description: None,
                                 data: None,
                                 message: format!("ERROR: expected {}\nFOUND: {}", expected, found),
-                                range: {
-                                    let own_text = text.clone();
-                                    own_text.chars();
-
-                                    Range {
-                                        start: Position {
-                                            line: 1,
-                                            character: 1,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            character: 1,
-                                        },
-                                    }
-                                },
+                                range: compute_range(text.replace("\r\n", "\n"), pos),
                                 severity: Some(DiagnosticSeverity::Error),
                                 related_information: None,
-                                source: Some("SPWN LSP syntax".to_string()),
+                                source: Some("SPWN Syntax Error (Expected)".to_string()),
                                 tags: None,
                             }],
                             None,
                         )
-                        .await;
+                        .await
                 }
-                spwn::parser::SyntaxError::UnexpectedErr { found, pos, file } => todo!(),
-                spwn::parser::SyntaxError::SyntaxError { message, pos, file } => todo!(),
+
+                spwn::parser::SyntaxError::UnexpectedErr { found, pos, .. } => {
+                    self.client
+                        .publish_diagnostics(
+                            params.text_document.uri,
+                            vec![Diagnostic {
+                                code: None,
+                                code_description: None,
+                                data: None,
+                                message: format!("ERROR: unexpected {}", found),
+                                range: compute_range(text.replace("\r\n", "\n"), pos),
+                                severity: Some(DiagnosticSeverity::Error),
+                                related_information: None,
+                                source: Some("SPWN Syntax Error (Unexpected)".to_string()),
+                                tags: None,
+                            }],
+                            None,
+                        )
+                        .await
+                }
+                spwn::parser::SyntaxError::SyntaxError { message, pos, file } => {
+                    self.client
+                        .publish_diagnostics(
+                            params.text_document.uri,
+                            vec![Diagnostic {
+                                code: None,
+                                code_description: None,
+                                data: None,
+                                message: format!("SYNTAX ERROR: {}", message),
+                                range: compute_range(text.replace("\r\n", "\n"), pos),
+                                severity: Some(DiagnosticSeverity::Error),
+                                related_information: None,
+                                source: Some("SPWN Syntax Error".to_string()),
+                                tags: None,
+                            }],
+                            None,
+                        )
+                        .await
+                }
             },
         }
     }
@@ -104,7 +127,7 @@ impl LanguageServer for Backend {
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::Info, "SPWN server initialized!")
+            .log_message(MessageType::Info, "SPWN-LSP initialized!")
             .await;
     }
 
@@ -123,21 +146,48 @@ async fn main() {
         .serve(service)
         .await;
 }
+/*
+we give it
 
+hello
+you
+are
+existant
+
+and
+
+(8, 10) // what does each number mean
+the first number is the starting point the 2nd is the end point
+oki
+
+it gives us
+
+Range {
+    start: Position {
+        line: 2
+        character: 3
+    },
+    end: Position {
+        line: 3
+        character: 2
+    }
+}
+*/
 fn compute_range(text: String, (start, end): (usize, usize)) -> Range {
-    let start_line_number = text
-        .chars()
-        .take(start)
-        .collect::<String>()
-        .matches("\n")
-        .count()
-        - 1;
+    let start_line_number = text.chars().take(start).collect::<String>().lines().count() - 1;
+    let end_line_number = text.chars().take(end).collect::<String>().lines().count() - 1;
+    let total_lines = end_line_number - start_line_number;
+    let start_char = start - total_lines + 1;
+    let end_char = end - total_lines + 1;
 
-    let end_line_number = text
-        .chars()
-        .take(end)
-        .collect::<String>()
-        .matches("\n")
-        .count()
-        - 1;
+    Range {
+        start: Position {
+            line: start_line_number as u32,
+            character: start_char as u32,
+        },
+        end: Position {
+            line: end_line_number as u32,
+            character: end_char as u32,
+        },
+    }
 }
