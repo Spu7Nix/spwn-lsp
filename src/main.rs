@@ -11,35 +11,6 @@ struct Backend {
 
 #[lspower::async_trait]
 impl LanguageServer for Backend {
-    async fn completion(
-        &self,
-        _params: lsp_types::CompletionParams,
-    ) -> lspower::jsonrpc::Result<Option<lsp_types::CompletionResponse>> {
-        Ok(Some(CompletionResponse::Array(vec![
-            CompletionItem::new_simple("to-be-added".to_string(), "haha yes".to_string()),
-        ])))
-    }
-
-    async fn did_change(&self, params: lsp_types::DidChangeTextDocumentParams) {
-        let diagnostics = set_syntax_errors(
-            &params.content_changes.first().unwrap().text.clone(),
-            params.clone().text_document.uri,
-        )
-        .await;
-
-        self.client.publish_diagnostics(params.text_document.uri, diagnostics, None).await
-    }
-
-    async fn did_save(&self, params: lsp_types::DidSaveTextDocumentParams) {
-        let diagnostics = set_syntax_errors(
-            params.text.as_ref().unwrap(),
-            params.clone().text_document.uri,
-        )
-        .await;
-
-        self.client.publish_diagnostics(params.text_document.uri, diagnostics, None).await
-    }
-
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(create_init())
     }
@@ -52,6 +23,47 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> lspower::jsonrpc::Result<()> {
         Ok(())
+    }
+
+    async fn did_change(&self, params: lsp_types::DidChangeTextDocumentParams) {
+        let mut diagnostics: Vec<Diagnostic> = Vec::new();
+
+        diagnostics.append(
+            &mut set_syntax_errors(
+                &params.content_changes.first().unwrap().text.clone(),
+                params.clone().text_document.uri,
+            )
+            .await,
+        );
+
+        self.client
+            .publish_diagnostics(params.text_document.uri, diagnostics, None)
+            .await
+    }
+
+    async fn did_save(&self, params: lsp_types::DidSaveTextDocumentParams) {
+        let mut diagnostics: Vec<Diagnostic> = Vec::new();
+
+        diagnostics.append(
+            &mut set_syntax_errors(
+                params.text.as_ref().unwrap(),
+                params.clone().text_document.uri,
+            )
+            .await,
+        );
+
+        self.client
+            .publish_diagnostics(params.text_document.uri, diagnostics, None)
+            .await
+    }
+
+    async fn completion(
+        &self,
+        _params: lsp_types::CompletionParams,
+    ) -> lspower::jsonrpc::Result<Option<lsp_types::CompletionResponse>> {
+        Ok(Some(CompletionResponse::Array(vec![
+            CompletionItem::new_simple("to-be-added".to_string(), "haha yes".to_string()),
+        ])))
     }
 }
 #[tokio::main]
