@@ -24,7 +24,6 @@ impl LanguageServer for Backend {
         let diagnostics = set_syntax_errors(
             &params.content_changes.first().unwrap().text.clone(),
             params.clone().text_document.uri,
-            self.client.clone(),
         )
         .await;
 
@@ -35,7 +34,6 @@ impl LanguageServer for Backend {
         let diagnostics = set_syntax_errors(
             params.text.as_ref().unwrap(),
             params.clone().text_document.uri,
-            self.client.clone(),
         )
         .await;
 
