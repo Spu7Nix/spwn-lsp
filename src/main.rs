@@ -79,7 +79,7 @@ impl LanguageServer for Backend {
                         )
                         .await
                 }
-                spwn::parser::SyntaxError::SyntaxError { message, pos, file } => {
+                spwn::parser::SyntaxError::SyntaxError { message, pos, .. } => {
                     self.client
                         .publish_diagnostics(
                             params.text_document.uri,
@@ -146,33 +146,7 @@ async fn main() {
         .serve(service)
         .await;
 }
-/*
-we give it
 
-hello
-you
-are
-existant
-
-and
-
-(8, 10) // what does each number mean
-the first number is the starting point the 2nd is the end point
-oki
-
-it gives us
-
-Range {
-    start: Position {
-        line: 2
-        character: 3
-    },
-    end: Position {
-        line: 3
-        character: 2
-    }
-}
-*/
 fn compute_range(text: String, (start, end): (usize, usize)) -> Range {
     let start_line_number = text.chars().take(start).collect::<String>().lines().count() - 1;
     let end_line_number = text.chars().take(end).collect::<String>().lines().count() - 1;
