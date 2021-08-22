@@ -129,7 +129,7 @@ async fn set_syntax_errors(text: String, text_location: Url, client: Client) {
                             code: None,
                             code_description: None,
                             data: None,
-                            message: format!("ERROR: expected {}\nFOUND: {}", expected, found),
+                            message: format!("ERROR: expected {},\nFOUND: {}", expected, found),
                             range: compute_range(text.replace("\r\n", "\n"), pos),
                             severity: Some(DiagnosticSeverity::Error),
                             related_information: None,
