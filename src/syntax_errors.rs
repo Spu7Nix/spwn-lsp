@@ -15,11 +15,7 @@ pub async fn set_syntax_errors(
     let mut diagnostics = Vec::<Diagnostic>::new();
 
     match parsed {
-        Ok(_) => {
-            client
-                .publish_diagnostics(text_location, vec![], None)
-                .await
-        }
+        Ok(_) => {}
 
         Err(error) => match error {
             spwn::parser::SyntaxError::ExpectedErr {
