@@ -4,7 +4,7 @@
 			"path": "."
 		},
 		{
-			"path": "clients\\code"
+			"path": "clients/code"
 		}
 	],
 	"settings": {

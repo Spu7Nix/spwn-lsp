@@ -21,21 +21,25 @@ impl LanguageServer for Backend {
     }
 
     async fn did_change(&self, params: lsp_types::DidChangeTextDocumentParams) {
-        set_syntax_errors(
-            params.content_changes.first().unwrap().text.clone(),
-            params.text_document.uri,
+        let diagnostics = set_syntax_errors(
+            &params.content_changes.first().unwrap().text.clone(),
+            params.clone().text_document.uri,
             self.client.clone(),
         )
-        .await
+        .await;
+
+        self.client.publish_diagnostics(params.text_document.uri, diagnostics, None).await
     }
 
     async fn did_save(&self, params: lsp_types::DidSaveTextDocumentParams) {
-        set_syntax_errors(
-            params.text.unwrap(),
-            params.text_document.uri,
+        let diagnostics = set_syntax_errors(
+            params.text.as_ref().unwrap(),
+            params.clone().text_document.uri,
             self.client.clone(),
         )
-        .await
+        .await;
+
+        self.client.publish_diagnostics(params.text_document.uri, diagnostics, None).await
     }
 
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
