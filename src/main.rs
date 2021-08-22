@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::path::PathBuf;
 
 use lspower::jsonrpc::Result;
@@ -28,7 +27,7 @@ impl LanguageServer for Backend {
         let parsed = parse_spwn(text.clone(), PathBuf::from(params.text_document.uri.path()));
 
         match parsed {
-            Ok(_val) => {
+            Ok(_) => {
                 self.client
                     .publish_diagnostics(params.text_document.uri, vec![], None)
                     .await
