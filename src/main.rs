@@ -1,12 +1,8 @@
-mod initialize;
-mod syntax_errors;
-mod utils;
-
-use initialize::create_init;
 use lspower::jsonrpc::Result;
 use lspower::lsp::*;
 use lspower::{Client, LanguageServer, LspService, Server};
-use syntax_errors::set_syntax_errors;
+use spwn_lsp::initialize::create_init;
+use spwn_lsp::syntax_errors::set_syntax_errors;
 
 #[derive(Debug)]
 struct Backend {
@@ -67,4 +63,3 @@ async fn main() {
         .serve(service)
         .await;
 }
-
