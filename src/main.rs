@@ -22,83 +22,22 @@ impl LanguageServer for Backend {
         ])))
     }
 
+    async fn did_change(&self, params: lsp_types::DidChangeTextDocumentParams) {
+        set_syntax_errors(
+            params.content_changes.first().unwrap().text.clone(),
+            params.text_document.uri,
+            self.client.clone(),
+        )
+        .await
+    }
+
     async fn did_save(&self, params: lsp_types::DidSaveTextDocumentParams) {
-        let text = params.text.unwrap();
-        let parsed = parse_spwn(text.clone(), PathBuf::from(params.text_document.uri.path()));
-
-        match parsed {
-            Ok(_) => {
-                self.client
-                    .publish_diagnostics(params.text_document.uri, vec![], None)
-                    .await
-            }
-
-            Err(error) => match error {
-                spwn::parser::SyntaxError::ExpectedErr {
-                    expected,
-                    found,
-                    pos,
-                    file: _,
-                } => {
-                    self.client
-                        .publish_diagnostics(
-                            params.text_document.uri,
-                            vec![Diagnostic {
-                                code: None,
-                                code_description: None,
-                                data: None,
-                                message: format!("ERROR: expected {}\nFOUND: {}", expected, found),
-                                range: compute_range(text.replace("\r\n", "\n"), pos),
-                                severity: Some(DiagnosticSeverity::Error),
-                                related_information: None,
-                                source: Some("SPWN Syntax Error (Expected)".to_string()),
-                                tags: None,
-                            }],
-                            None,
-                        )
-                        .await
-                }
-
-                spwn::parser::SyntaxError::UnexpectedErr { found, pos, .. } => {
-                    self.client
-                        .publish_diagnostics(
-                            params.text_document.uri,
-                            vec![Diagnostic {
-                                code: None,
-                                code_description: None,
-                                data: None,
-                                message: format!("ERROR: unexpected {}", found),
-                                range: compute_range(text.replace("\r\n", "\n"), pos),
-                                severity: Some(DiagnosticSeverity::Error),
-                                related_information: None,
-                                source: Some("SPWN Syntax Error (Unexpected)".to_string()),
-                                tags: None,
-                            }],
-                            None,
-                        )
-                        .await
-                }
-                spwn::parser::SyntaxError::SyntaxError { message, pos, .. } => {
-                    self.client
-                        .publish_diagnostics(
-                            params.text_document.uri,
-                            vec![Diagnostic {
-                                code: None,
-                                code_description: None,
-                                data: None,
-                                message: format!("SYNTAX ERROR: {}", message),
-                                range: compute_range(text.replace("\r\n", "\n"), pos),
-                                severity: Some(DiagnosticSeverity::Error),
-                                related_information: None,
-                                source: Some("SPWN Syntax Error".to_string()),
-                                tags: None,
-                            }],
-                            None,
-                        )
-                        .await
-                }
-            },
-        }
+        set_syntax_errors(
+            params.text.unwrap(),
+            params.text_document.uri,
+            self.client.clone(),
+        )
+        .await
     }
 
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
@@ -115,6 +54,7 @@ impl LanguageServer for Backend {
                         save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
                             include_text: Some(true),
                         })),
+                        change: Some(TextDocumentSyncKind::Full),
                         ..Default::default()
                     },
                 )),
@@ -161,6 +101,84 @@ fn compute_range(text: String, (start, end): (usize, usize)) -> Range {
         end: Position {
             line: end_line_number as u32,
             character: end_char as u32,
+        },
+    }
+}
+
+async fn set_syntax_errors(text: String, text_location: Url, client: Client) {
+    let parsed = parse_spwn(text.clone(), PathBuf::from(text_location.path()));
+
+    match parsed {
+        Ok(_) => {
+            client
+                .publish_diagnostics(text_location, vec![], None)
+                .await
+        }
+
+        Err(error) => match error {
+            spwn::parser::SyntaxError::ExpectedErr {
+                expected,
+                found,
+                pos,
+                file: _,
+            } => {
+                client
+                    .publish_diagnostics(
+                        text_location,
+                        vec![Diagnostic {
+                            code: None,
+                            code_description: None,
+                            data: None,
+                            message: format!("ERROR: expected {}\nFOUND: {}", expected, found),
+                            range: compute_range(text.replace("\r\n", "\n"), pos),
+                            severity: Some(DiagnosticSeverity::Error),
+                            related_information: None,
+                            source: Some("SPWN Syntax Error (Expected)".to_string()),
+                            tags: None,
+                        }],
+                        None,
+                    )
+                    .await
+            }
+
+            spwn::parser::SyntaxError::UnexpectedErr { found, pos, .. } => {
+                client
+                    .publish_diagnostics(
+                        text_location,
+                        vec![Diagnostic {
+                            code: None,
+                            code_description: None,
+                            data: None,
+                            message: format!("ERROR: unexpected {}", found),
+                            range: compute_range(text.replace("\r\n", "\n"), pos),
+                            severity: Some(DiagnosticSeverity::Error),
+                            related_information: None,
+                            source: Some("SPWN Syntax Error (Unexpected)".to_string()),
+                            tags: None,
+                        }],
+                        None,
+                    )
+                    .await
+            }
+            spwn::parser::SyntaxError::SyntaxError { message, pos, .. } => {
+                client
+                    .publish_diagnostics(
+                        text_location,
+                        vec![Diagnostic {
+                            code: None,
+                            code_description: None,
+                            data: None,
+                            message: format!("SYNTAX ERROR: {}", message),
+                            range: compute_range(text.replace("\r\n", "\n"), pos),
+                            severity: Some(DiagnosticSeverity::Error),
+                            related_information: None,
+                            source: Some("SPWN Syntax Error".to_string()),
+                            tags: None,
+                        }],
+                        None,
+                    )
+                    .await
+            }
         },
     }
 }
