@@ -7,7 +7,7 @@ use lsp_types::{
 pub fn create_init() -> InitializeResult {
     let server_info = ServerInfo {
         name: "SPWN-Srvr".to_string(),
-        version: Some("alpha".to_string()),
+        version: Some("0.1.0".to_string()),
     };
 
     let completion_provider = CompletionOptions {
@@ -35,5 +35,20 @@ pub fn create_init() -> InitializeResult {
     InitializeResult {
         capabilities,
         server_info: Some(server_info),
+    }
+}
+
+mod tests {
+    #[test]
+    fn is_correct_version() {
+        use super::create_init;
+
+        let output = create_init();
+        let current_version = env!("CARGO_PKG_VERSION");
+
+        assert_eq!(
+            output.server_info.unwrap().version.unwrap(),
+            current_version
+        )
     }
 }
