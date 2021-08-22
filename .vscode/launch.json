@@ -7,11 +7,10 @@
 			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}" ],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/clients/code" ],
 			"stopOnEntry": false,
 			"sourceMaps": true,
-			"outFiles": ["${workspaceRoot}clients/code/client/out/**/*.js"],
-			"preLaunchTask": "npm: watch"
+			"outFiles": ["${workspaceRoot}/clients/code/client/out/**/*.js"],
 		}
 	]
 }
