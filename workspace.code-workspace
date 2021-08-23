@@ -13,5 +13,10 @@
 		"conventionalCommits.scopes": [
 			"vscode"
 		]
+	},
+	"extensions": {
+		"recommendations": [
+			"vivaxy.vscode-conventional-commits"
+		]
 	}
 }
