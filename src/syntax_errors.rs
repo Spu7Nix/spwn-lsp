@@ -59,3 +59,44 @@ pub async fn set_syntax_errors(text: &String, text_location: Url) -> Vec<Diagnos
 
     diagnostics
 }
+
+#[cfg(test)]
+mod tests {
+    use lsp_types::Url;
+
+    #[tokio::test]
+    async fn basic_shouldnt_fail() {
+        use super::set_syntax_errors;
+
+        let test_file = "
+            let a = \"hello world\"
+
+            myfunc = () {
+                a
+            }
+        "
+        .to_string();
+
+        let output = set_syntax_errors(&test_file, Url::parse("file://test.spwn").unwrap()).await;
+
+        assert_eq!(output, vec![])
+    }
+
+    #[tokio::test]
+    async fn basic_should_fail() {
+        use super::set_syntax_errors;
+
+        let test_file = "
+            let a = \"hello world
+
+            myfunc = () {
+                a
+            }
+        "
+        .to_string();
+
+        let output = set_syntax_errors(&test_file, Url::parse("file://test.spwn").unwrap()).await;
+
+        assert_ne!(output, vec![])
+    }
+}
