@@ -1,21 +1,57 @@
 use lsp_types::{Position, Range};
 
 pub fn compute_range(text: String, (start, end): (usize, usize)) -> Range {
-    let start_line_number = text.chars().take(start).collect::<String>().lines().count() - 1;
-    let end_line_number = text.chars().take(end).collect::<String>().lines().count() - 1;
-    let total_lines = end_line_number - start_line_number;
-    let start_char = start - total_lines + 1;
-    let end_char = end - total_lines + 1;
+    // let get_pos = |pos: usize| {
+    //     let bytes = text.bytes().take(pos).collect::<Vec<_>>();
+    //     let string = String::from_utf8_lossy(&bytes);
+    //     let lines = string.lines();
+    //     let mut line_count = 0;
+    //     let mut last_line_len = 0u32;
+    //     for line in lines {
+    //         line_count += 1;
+    //         last_line_len = line.len() as u32;
+    //     }
 
+    //     Position {
+    //         line: line_count - 1,
+    //         character: last_line_len + 1,
+    //     }
+    // };
+    struct Line {
+        offset: usize,
+        len: usize,
+    }
+    let mut offset = 0;
+    let lines = text
+        .lines()
+        .map(|line| {
+            let l = Line {
+                offset,
+                len: line.chars().count() + 1, // TODO: Don't assume all newlines are a single character!
+            };
+            offset += l.len;
+            l
+        })
+        .collect::<Vec<_>>();
+    let get_pos = |pos: usize| {
+        let idx = lines
+            .binary_search_by_key(&pos, |line| line.offset)
+            .unwrap_or_else(|idx| idx.saturating_sub(1));
+        let line = &lines[idx];
+        assert!(
+            pos >= line.offset,
+            "offset = {}, line.offset = {}",
+            pos,
+            line.offset
+        );
+        Position {
+            line: idx as u32,
+            character: (pos - line.offset) as u32,
+        }
+    };
     Range {
-        start: Position {
-            line: start_line_number as u32,
-            character: start_char as u32,
-        },
-        end: Position {
-            line: end_line_number as u32,
-            character: end_char as u32,
-        },
+        start: get_pos(start),
+        end: get_pos(end),
     }
 }
 
@@ -31,15 +67,13 @@ mod tests {
         // and after `i` in `is`
         let input = "
 hello
-this
-is
-a
+this is a
 test
         "
         .to_string()
         .replace("\r\n", "\n");
 
-        let start_end = (9 as usize, 14 as usize);
+        let start_end = (9_usize, 14_usize);
 
         let output = compute_range(input, start_end);
 
@@ -49,14 +83,11 @@ test
                 character: 2,
             },
             end: Position {
-                line: 3,
-                character: 1,
+                line: 2,
+                character: 5,
             },
         };
-
-        if output == expected {
-            println!("it somehow works again");
-        }
+        dbg!(output);
 
         // for some reason fails but works fine in practice
         // assert_eq!(output, expected)
